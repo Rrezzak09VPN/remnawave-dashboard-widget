@@ -9,10 +9,12 @@
 :root { --bg: #0f172a; --card: #1e293b; --text: #e2e8f0; --muted: #94a3b8; --accent: #38bdf8; --ok: #22c55e; --warn: #eab308; --err: #ef4444; }
 @font-face {
     font-family: "Twemoji Country Flags";
-    src: url("https://cdn.jsdelivr.net/npm/country-flag-emoji-polyfill@0.1.3/dist/TwemojiCountryFlags.woff2") format("woff2");
+    src: url("https://fastly.jsdelivr.net/npm/country-flag-emoji-polyfill@0.1.3/dist/TwemojiCountryFlags.woff2") format("woff2"),
+         url("https://unpkg.com/country-flag-emoji-polyfill@0.1.3/dist/TwemojiCountryFlags.woff2") format("woff2"),
+         url("https://cdn.jsdelivr.net/npm/country-flag-emoji-polyfill@0.1.3/dist/TwemojiCountryFlags.woff2") format("woff2");
     unicode-range: U+1F1E6-1F1FF, U+1F3F4, U+E0061-E007F;
 }
-body { font-family: 'Segoe UI', "Twemoji Country Flags", sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+body { font-family: "Twemoji Country Flags", 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
 .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 20px; margin-bottom: 30px; }
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
 .stat-card { background: var(--card); padding: 20px; border-radius: 12px; }
