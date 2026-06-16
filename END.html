@@ -434,7 +434,16 @@ tr:last-child td { border-bottom: none; }
 
 // --- GLOBAL STATE & CONFIG ---
 const DEFAULT_CITY = { name: "Новосибирск", lat: 55.0415, lon: 82.9346, tz: "Asia/Novosibirsk" };
-let activeCity = JSON.parse(localStorage.getItem('user-city')) || DEFAULT_CITY;
+let activeCity;
+try {
+    activeCity = JSON.parse(localStorage.getItem('user-city'));
+} catch (e) {
+    activeCity = null;
+}
+if (!activeCity || typeof activeCity !== 'object' || !activeCity.lat || !activeCity.lon || !activeCity.tz || !activeCity.name) {
+    activeCity = DEFAULT_CITY;
+    localStorage.setItem('user-city', JSON.stringify(DEFAULT_CITY));
+}
 
 const POPULAR_CITIES = [
     { name: "Новосибирск", lat: 55.0415, lon: 82.9346, tz: "Asia/Novosibirsk", desc: "НСК" },
