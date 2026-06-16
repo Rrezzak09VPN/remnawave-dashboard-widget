@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Remnawave Live Dashboard</title>
+<style>
+:root { --bg: #0f172a; --card: #1e293b; --text: #e2e8f0; --muted: #94a3b8; --accent: #38bdf8; --ok: #22c55e; --warn: #eab308; --err: #ef4444; }
+body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+.header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 20px; margin-bottom: 30px; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+.stat-card { background: var(--card); padding: 20px; border-radius: 12px; }
+.stat-value { font-size: 2em; font-weight: bold; color: var(--accent); }
+.stat-label { color: var(--muted); font-size: 0.9em; }
+.section-title { margin-bottom: 20px; font-size: 1.3em; display: flex; align-items: center; gap: 10px; }
+.nodes-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; margin-bottom: 40px; }
+.node-card { background: var(--card); border-radius: 12px; padding: 20px; border-left: 5px solid var(--ok); }
+.node-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.node-name { font-size: 1.2em; font-weight: bold; }
+.badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; background: rgba(34,197,94,0.2); color: var(--ok); }
+.online-badge { background: rgba(56,189,248,0.2); color: var(--accent); padding: 4px 8px; border-radius: 4px; font-size: 0.85em; margin-left: 10px; }
+.metric-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9em; }
+.progress-bar { height: 6px; background: #334155; border-radius: 3px; margin-top: 5px; overflow: hidden; }
+.progress-fill { height: 100%; transition: width 0.5s ease, background-color 0.5s ease; }
+/* Table Styles */
+.users-table-wrapper { background: var(--card); border-radius: 12px; overflow: hidden; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 12px 20px; text-align: left; border-bottom: 1px solid #334155; }
+th { background: rgba(255,255,255,0.03); color: var(--muted); font-weight: 600; font-size: 0.85em; text-transform: uppercase; }
+tr:last-child td { border-bottom: none; }
+.user-node-tag { font-size: 0.8em; padding: 2px 6px; border-radius: 4px; background: rgba(56,189,248,0.15); color: var(--accent); }
+.empty-state { padding: 40px; text-align: center; color: var(--muted); }
+.disclaimer { font-size: 0.75em; color: var(--warn); font-weight: normal; margin-left: 10px; }
+#api-error { display: none; color: var(--err); padding: 15px; background: rgba(239,68,68,0.1); border-radius: 8px; margin-bottom: 20px; }
+
+/* --- NEW DASHBOARD COMPONENTS --- */
+.top-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+    align-items: stretch;
+}
+.top-card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 15px 20px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Weather Block with Dynamic Search */
+.weather-card {
+    justify-content: space-between;
+    min-height: 180px;
+}
+.weather-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    position: relative;
+}
+.weather-title {
+    font-size: 0.85em;
+    color: var(--muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.city-search-container {
+    position: relative;
+    flex-grow: 1;
+    max-width: 140px;
+}
+#city-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 0.75em;
+    outline: none;
+    transition: all 0.2s;
+    box-sizing: border-box;
+}
+#city-input:focus {
+    border-color: var(--accent);
+    background: rgba(255, 255, 255, 0.08);
+}
+.city-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 220px;
+    background: #1e293b;
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    display: none;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 5px;
+}
+.city-dropdown-item {
+    padding: 8px 10px;
+    font-size: 0.8em;
+    cursor: pointer;
+    color: var(--text);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    justify-content: space-between;
+}
+.city-dropdown-item:last-child {
+    border-bottom: none;
+}
+.city-dropdown-item:hover {
+    background: rgba(56, 189, 248, 0.15);
+    color: var(--accent);
+}
+.city-dropdown-section {
+    font-size: 0.7em;
+    color: var(--muted);
+    padding: 4px 10px;
+    background: rgba(0,0,0,0.15);
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.weather-main {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+.weather-temp {
+    font-size: 2.5em;
+    font-weight: 700;
+    color: var(--text);
+}
+.weather-icon {
+    font-size: 2.8em;
+}
+.weather-desc {
+    font-size: 0.95em;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 10px;
+}
+.weather-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.8em;
+    color: var(--muted);
+}
+.weather-detail-row {
+    display: flex;
+    justify-content: space-between;
+}
+.weather-detail-row strong {
+    color: var(--text);
+}
+.weather-loading, .weather-error {
+    text-align: center;
+    padding: 20px 0;
+    color: var(--muted);
+    font-size: 0.9em;
+}
+
+/* Clock Block with Adaptive Sizing */
+.clock-card {
+    align-items: center;
+    text-align: center;
+    min-height: 180px;
+}
+.clock-time {
+    font-size: clamp(2.2rem, 5vw, 3.5rem);
+    font-weight: 800;
+    color: var(--accent);
+    font-family: 'Consolas', 'Courier New', monospace;
+    letter-spacing: 1px;
+    text-shadow: 0 0 15px rgba(56, 189, 248, 0.25);
+}
+.clock-date {
+    font-size: 0.95em;
+    color: var(--text);
+    margin-top: 10px;
+    font-weight: 500;
+}
+.clock-timezone {
+    font-size: 0.75em;
+    color: var(--muted);
+    margin-top: 4px;
+}
+
+/* Calendar Block */
+.calendar-card {
+    font-family: inherit;
+    min-height: 180px;
+}
+.calendar-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    gap: 5px;
+}
+.calendar-title {
+    font-weight: 600;
+    font-size: 0.95em;
+    color: var(--text);
+    text-align: center;
+    flex-grow: 1;
+}
+.cal-btn-group {
+    display: flex;
+    gap: 2px;
+}
+.calendar-nav button {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text);
+    border-radius: 4px;
+    padding: 3px 6px;
+    font-size: 0.75em;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+}
+.calendar-nav button:hover {
+    background: var(--accent);
+    color: #0f172a;
+    border-color: var(--accent);
+}
+.calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-size: 0.7em;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 4px;
+}
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+    text-align: center;
+}
+.cal-day {
+    font-size: 0.8em;
+    padding: 3px 0;
+    border-radius: 4px;
+    color: var(--text);
+    cursor: default;
+    user-select: none;
+}
+.cal-day.other-month {
+    color: rgba(255, 255, 255, 0.15);
+}
+.cal-day.today {
+    background: var(--accent);
+    color: #0f172a;
+    font-weight: bold;
+    box-shadow: 0 0 6px var(--accent);
+}
+.cal-today-btn {
+    background: transparent;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    color: var(--accent);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 0.75em;
+    cursor: pointer;
+    margin-top: 6px;
+    transition: all 0.2s;
+}
+.cal-today-btn:hover {
+    background: rgba(56, 189, 248, 0.15);
+}
+
+/* Floating bottom right update element */
+#last-update-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(30, 41, 59, 0.9);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    border-radius: 50px;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8em;
+    color: var(--text);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+}
+.spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(56, 189, 248, 0.2);
+    border-top: 2px solid var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive Adaptive Dual Column Layout */
+.main-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 30px;
+    margin-bottom: 40px;
+}
+@media (orientation: landscape) and (min-width: 1100px) {
+    .main-layout {
+        grid-template-columns: 1.6fr 1.2fr;
+        align-items: start;
+    }
+}
+</style>
+</head>
+<body>
+<div class="top-grid">
+    <!-- Left: Weather -->
+    <div class="top-card weather-card">
+        <div class="weather-header-row">
+            <div class="weather-title" id="weather-title-text">☁️ Погода</div>
+            <div class="city-search-container">
+                <input type="text" id="city-input" placeholder="🔍 Город..." autocomplete="off">
+                <div id="city-dropdown" class="city-dropdown-menu"></div>
+            </div>
+        </div>
+        <div id="weather-content">
+            <div class="weather-loading">Загрузка...</div>
+        </div>
+    </div>
+
+    <!-- Middle: Clock -->
+    <div class="top-card clock-card">
+        <div class="clock-time" id="clock-time">00:00:00</div>
+        <div class="clock-date" id="clock-date">...</div>
+        <div class="clock-timezone" id="clock-timezone">Загрузка...</div>
+    </div>
+
+    <!-- Right: Calendar -->
+    <div class="top-card calendar-card">
+        <div class="calendar-nav">
+            <div class="cal-btn-group">
+                <button id="cal-prev-year" title="Предыдущий год">«</button>
+                <button id="cal-prev-month" title="Предыдущий месяц">‹</button>
+                <button id="cal-prev-week" title="Предыдущая неделя">‹ нед</button>
+            </div>
+            <div class="calendar-title" id="calendar-title">...</div>
+            <div class="cal-btn-group">
+                <button id="cal-next-week" title="Следующая неделя">нед ›</button>
+                <button id="cal-next-month" title="Следующий месяц">›</button>
+                <button id="cal-next-year" title="Следующий год">»</button>
+            </div>
+        </div>
+        <div class="calendar-weekdays">
+            <div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div>
+        </div>
+        <div class="calendar-grid" id="calendar-grid"></div>
+        <div style="text-align: center;">
+            <button id="cal-today" class="cal-today-btn">Сегодня</button>
+        </div>
+    </div>
+</div>
+
+<div id="last-update-container">
+    <div class="spinner"></div>
+    <div id="last-update">...</div>
+</div>
+
+<div id="api-error"></div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value" id="nodes-count">-</div>
+        <div class="stat-label">Нод онлайн</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="users-count" style="color: var(--ok)">-</div>
+        <div class="stat-label">Реальный онлайн (ядра)</div>
+    </div>
+</div>
+
+<div class="main-layout">
+    <div class="layout-column">
+        <div class="section-title">🟢 Активные ноды</div>
+        <div id="nodes-list" class="nodes-container"></div>
+    </div>
+    <div class="layout-column">
+        <div class="section-title">
+            👥 Онлайн 
+            <span class="disclaimer">⚠️ Эмуляция: активность &lt; 30 сек назад</span>
+        </div>
+        <div class="users-table-wrapper">
+            <table id="users-table">
+                <thead>
+                    <tr>
+                        <th>Пользователь</th>
+                        <th>Нода</th>
+                        <th>Активность</th>
+                    </tr>
+                </thead>
+                <tbody id="users-body">
+                    <tr><td colspan="3" class="empty-state">Загрузка...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+/* --- NEW COMPONENTS LOGIC WITH DYNAMIC SELECTION --- */
+
+// --- GLOBAL STATE & CONFIG ---
+const DEFAULT_CITY = { name: "Новосибирск", lat: 55.0415, lon: 82.9346, tz: "Asia/Novosibirsk" };
+let activeCity = JSON.parse(localStorage.getItem('user-city')) || DEFAULT_CITY;
+
+const POPULAR_CITIES = [
+    { name: "Новосибирск", lat: 55.0415, lon: 82.9346, tz: "Asia/Novosibirsk", desc: "НСК" },
+    { name: "Москва", lat: 55.7558, lon: 37.6173, tz: "Europe/Moscow", desc: "МСК" },
+    { name: "Санкт-Петербург", lat: 59.9343, lon: 30.3351, tz: "Europe/Moscow", desc: "СПБ" },
+    { name: "Екатеринбург", lat: 56.8389, lon: 60.6057, tz: "Asia/Yekaterinburg", desc: "ЕКБ" },
+    { name: "Владивосток", lat: 43.1198, lon: 131.8869, tz: "Asia/Vladivostok", desc: "ВЛД" }
+];
+
+// --- CLOCK ---
+function updateClock() {
+    const now = new Date();
+    
+    // Format options matching the selected city's timezone
+    const timeOptions = {
+        timeZone: activeCity.tz,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    };
+    const dateOptions = {
+        timeZone: activeCity.tz,
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    };
+    
+    try {
+        const timeFormatter = new Intl.DateTimeFormat('ru-RU', timeOptions);
+        const dateFormatter = new Intl.DateTimeFormat('ru-RU', dateOptions);
+        
+        document.getElementById('clock-time').textContent = timeFormatter.format(now);
+        document.getElementById('clock-date').textContent = dateFormatter.format(now);
+        document.getElementById('clock-timezone').textContent = `${activeCity.name} (${activeCity.tz})`;
+    } catch (e) {
+        // Fallback to local time if timezone formatting fails
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        const ss = String(now.getSeconds()).padStart(2, '0');
+        document.getElementById('clock-time').textContent = `${hh}:${mm}:${ss}`;
+        
+        const days = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
+        const months = [
+            "января", "февраля", "марта", "апреля", "мая", "июня",
+            "июля", "августа", "сентября", "октября", "ноября", "декабря"
+        ];
+        document.getElementById('clock-date').textContent = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+        document.getElementById('clock-timezone').textContent = `${activeCity.name} (Локально)`;
+    }
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// --- WEATHER ---
+async function fetchWeather() {
+    const weatherContent = document.getElementById('weather-content');
+    document.getElementById('weather-title-text').textContent = `☁️ Погода: ${activeCity.name}`;
+    
+    try {
+        let response;
+        let data;
+        
+        // 1. Try backend proxy with query arguments
+        try {
+            response = await fetch(`/api/weather?lat=${activeCity.lat}&lon=${activeCity.lon}&tz=${activeCity.tz}`);
+            if (response.ok) {
+                data = await response.json();
+            }
+        } catch (backendError) {
+            console.warn("Backend weather proxy failed, trying direct fetch...", backendError);
+        }
+        
+        // 2. Fallback to direct client-side fetch if backend failed or returned an error
+        if (!data || data.error) {
+            response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${activeCity.lat}&longitude=${activeCity.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&wind_speed_unit=ms&timezone=${activeCity.tz}`);
+            if (!response.ok) throw new Error('Direct fetch failed');
+            data = await response.json();
+        }
+        
+        const current = data.current;
+        const code = current.weather_code;
+        const temp = Math.round(current.temperature_2m);
+        const apparent = Math.round(current.apparent_temperature);
+        const humidity = current.relative_humidity_2m;
+        const wind = current.wind_speed_10m;
+        
+        const weatherMap = {
+            0: { text: "Ясно", icon: "☀️" },
+            1: { text: "Преимущественно ясно", icon: "🌤️" },
+            2: { text: "Переменная облачность", icon: "⛅" },
+            3: { text: "Пасмурно", icon: "☁️" },
+            45: { text: "Туман", icon: "🌫️" },
+            48: { text: "Осаждающийся туман", icon: "🌫️" },
+            51: { text: "Легкая морось", icon: "🌧️" },
+            53: { text: "Умеренная морось", icon: "🌧️" },
+            55: { text: "Плотная морось", icon: "🌧️" },
+            56: { text: "Легкий ледяной дождь", icon: "🌧️" },
+            57: { text: "Плотный ледяной дождь", icon: "🌧️" },
+            61: { text: "Слабый дождь", icon: "🌧️" },
+            63: { text: "Умеренный дождь", icon: "🌧️" },
+            65: { text: "Сильный дождь", icon: "🌧️" },
+            66: { text: "Слабый ледяной дождь", icon: "🌧️" },
+            67: { text: "Сильный ледяной дождь", icon: "🌧️" },
+            71: { text: "Слабый снегопад", icon: "❄️" },
+            73: { text: "Умеренный снегопад", icon: "❄️" },
+            75: { text: "Сильный снегопад", icon: "❄️" },
+            77: { text: "Снежные зерна", icon: "❄️" },
+            80: { text: "Слабый ливневый дождь", icon: "🌧️" },
+            81: { text: "Умеренный ливневый дождь", icon: "🌧️" },
+            82: { text: "Сильный ливневый дождь", icon: "⛈️" },
+            85: { text: "Слабый ливневый снег", icon: "❄️" },
+            86: { text: "Сильный ливневый снег", icon: "❄️" },
+            95: { text: "Гроза", icon: "⛈️" },
+            96: { text: "Гроза со слабым градом", icon: "⛈️" },
+            99: { text: "Гроза с сильным градом", icon: "⛈️" }
+        };
+        
+        const info = weatherMap[code] || { text: "Неизвестно", icon: "⛅" };
+        
+        weatherContent.innerHTML = `
+            <div class="weather-main">
+                <span class="weather-icon">${info.icon}</span>
+                <span class="weather-temp">${temp > 0 ? '+' : ''}${temp}°C</span>
+            </div>
+            <div class="weather-desc">${info.text}</div>
+            <div class="weather-details">
+                <div class="weather-detail-row"><span>Ощущается:</span><strong>${apparent > 0 ? '+' : ''}${apparent}°C</strong></div>
+                <div class="weather-detail-row"><span>Влажность:</span><strong>${humidity}%</strong></div>
+                <div class="weather-detail-row"><span>Ветер:</span><strong>${wind} м/с</strong></div>
+            </div>
+        `;
+    } catch (e) {
+        weatherContent.innerHTML = `
+            <div class="weather-error">
+                <div>⚠️ Ошибка загрузки</div>
+                <button onclick="fetchWeather()" style="margin-top:8px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:var(--text); padding:3px 8px; border-radius:4px; font-size:0.8em; cursor:pointer;">Повторить</button>
+            </div>
+        `;
+    }
+}
+fetchWeather();
+setInterval(fetchWeather, 600000); // Update every 10 minutes
+
+
+// --- GEOLOCATION / CITY SEARCH dropdown ---
+const cityInput = document.getElementById('city-input');
+const cityDropdown = document.getElementById('city-dropdown');
+
+cityInput.onfocus = () => {
+    showCities(POPULAR_CITIES, "Популярные города");
+};
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.city-search-container')) {
+        cityDropdown.style.display = 'none';
+    }
+});
+
+let geocodeTimeout;
+cityInput.oninput = (e) => {
+    clearTimeout(geocodeTimeout);
+    const query = e.target.value.trim();
+    if (query.length < 2) {
+        showCities(POPULAR_CITIES, "Популярные города");
+        return;
+    }
+    geocodeTimeout = setTimeout(() => {
+        searchCity(query);
+    }, 400);
+};
+
+async function searchCity(query) {
+    try {
+        const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=ru`);
+        if (!r.ok) throw new Error();
+        const data = await r.json();
+        if (data.results && data.results.length > 0) {
+            const mapped = data.results.map(item => ({
+                name: item.name,
+                lat: item.latitude,
+                lon: item.longitude,
+                tz: item.timezone || "UTC",
+                desc: item.country || item.admin1 || ""
+            }));
+            showCities(mapped, "Результаты поиска");
+        } else {
+            cityDropdown.innerHTML = `<div style="padding: 8px; font-size: 0.8em; color: var(--muted); text-align: center;">Ничего не найдено</div>`;
+            cityDropdown.style.display = 'block';
+        }
+    } catch (err) {
+        const filteredPopular = POPULAR_CITIES.filter(c => c.name.toLowerCase().includes(query.toLowerCase()));
+        showCities(filteredPopular, "Популярные (офлайн)");
+    }
+}
+
+function showCities(list, title) {
+    if (list.length === 0) {
+        cityDropdown.style.display = 'none';
+        return;
+    }
+    let html = `<div class="city-dropdown-section">${title}</div>`;
+    list.forEach(city => {
+        html += `
+            <div class="city-dropdown-item" data-lat="${city.lat}" data-lon="${city.lon}" data-tz="${city.tz}" data-name="${city.name}">
+                <span>📍 ${city.name}</span>
+                <span style="font-size:0.85em; color:var(--muted); margin-left:10px;">${city.desc}</span>
+            </div>
+        `;
+    });
+    cityDropdown.innerHTML = html;
+    cityDropdown.style.display = 'block';
+    
+    Array.from(cityDropdown.querySelectorAll('.city-dropdown-item')).forEach(el => {
+        el.onclick = () => {
+            activeCity = {
+                name: el.dataset.name,
+                lat: parseFloat(el.dataset.lat),
+                lon: parseFloat(el.dataset.lon),
+                tz: el.dataset.tz
+            };
+            localStorage.setItem('user-city', JSON.stringify(activeCity));
+            cityInput.value = '';
+            cityDropdown.style.display = 'none';
+            
+            fetchWeather();
+            updateClock();
+        };
+    });
+}
+
+
+// --- CALENDAR ---
+let currentCalDate = new Date(); // State for currently shown month
+const todayDate = new Date();     // State for absolute today's date
+
+function renderCalendar() {
+    const year = currentCalDate.getFullYear();
+    const month = currentCalDate.getMonth(); // 0-11
+    
+    const monthNames = [
+        "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+        "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"
+    ];
+    document.getElementById('calendar-title').textContent = `${monthNames[month]} ${year}`;
+    
+    const firstDay = new Date(year, month, 1);
+    let startDayIndex = firstDay.getDay(); // 0 = Sun, 1 = Mon ...
+    startDayIndex = startDayIndex === 0 ? 6 : startDayIndex - 1; // Convert to Monday-start (0 = Mon, 6 = Sun)
+    
+    const prevMonthDays = new Date(year, month, 0).getDate();
+    const currentMonthDays = new Date(year, month + 1, 0).getDate();
+    
+    const grid = document.getElementById('calendar-grid');
+    grid.innerHTML = '';
+    
+    // Fill previous month's days
+    for (let i = startDayIndex - 1; i >= 0; i--) {
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'cal-day other-month';
+        dayDiv.textContent = prevMonthDays - i;
+        grid.appendChild(dayDiv);
+    }
+    
+    // Fill current month's days
+    for (let i = 1; i <= currentMonthDays; i++) {
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'cal-day';
+        dayDiv.textContent = i;
+        
+        if (year === todayDate.getFullYear() && month === todayDate.getMonth() && i === todayDate.getDate()) {
+            dayDiv.classList.add('today');
+        }
+        grid.appendChild(dayDiv);
+    }
+    
+    // Fill next month's days to fill 42 cells (6 rows of 7)
+    const totalCells = 42;
+    const currentCells = grid.children.length;
+    const remainingCells = totalCells - currentCells;
+    for (let i = 1; i <= remainingCells; i++) {
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'cal-day other-month';
+        dayDiv.textContent = i;
+        grid.appendChild(dayDiv);
+    }
+}
+
+// Event handlers
+document.getElementById('cal-prev-year').onclick = () => {
+    currentCalDate.setFullYear(currentCalDate.getFullYear() - 1);
+    renderCalendar();
+};
+document.getElementById('cal-next-year').onclick = () => {
+    currentCalDate.setFullYear(currentCalDate.getFullYear() + 1);
+    renderCalendar();
+};
+document.getElementById('cal-prev-month').onclick = () => {
+    currentCalDate.setMonth(currentCalDate.getMonth() - 1);
+    renderCalendar();
+};
+document.getElementById('cal-next-month').onclick = () => {
+    currentCalDate.setMonth(currentCalDate.getMonth() + 1);
+    renderCalendar();
+};
+document.getElementById('cal-prev-week').onclick = () => {
+    currentCalDate.setDate(currentCalDate.getDate() - 7);
+    renderCalendar();
+};
+document.getElementById('cal-next-week').onclick = () => {
+    currentCalDate.setDate(currentCalDate.getDate() + 7);
+    renderCalendar();
+};
+document.getElementById('cal-today').onclick = () => {
+    currentCalDate = new Date();
+    renderCalendar();
+};
+
+renderCalendar();
+
+
+const container = document.getElementById('nodes-list');
+let isFirstRender = true;
+
+async function fetchData() {
+    try {
+        const r = await fetch('/api/dashboard-data');
+        const d = await r.json();
+        update(d);
+    } catch (e) {
+        document.getElementById('api-error').style.display = 'block';
+        document.getElementById('api-error').textContent = '❌ Ошибка: ' + e.message;
+    }
+}
+
+function createNodeCard(n) {
+    let ramColor = n.ram_percent > 90 ? 'var(--err)' : n.ram_percent > 70 ? 'var(--warn)' : 'var(--ok)';
+    const onlineHtml = n.users_online > 0 
+        ? `<span class="online-badge">👥 ${n.users_online} онлайн</span>` 
+        : '';
+    
+    const div = document.createElement('div');
+    div.className = 'node-card';
+    div.dataset.uuid = n.name;
+    div.innerHTML = `
+        <div class="node-header">
+            <div style="display:flex; align-items:center;">
+                <span class="node-name">${n.name}</span>
+                ${onlineHtml}
+            </div>
+            <span class="badge">ONLINE</span>
+        </div>
+        <div class="metric-row"><span>Адрес:</span><span style="font-family:monospace; color:var(--muted)">${n.address}</span></div>
+        <div class="metric-row"><span>CPU:</span><span>${n.cpu_model}</span></div>
+        <div class="metric-row"><span>Load (1m):</span><span>${n.load_1m}</span></div>
+        <div class="metric-row"><span>Трафик:</span><span>${n.traffic_gb} GB</span></div>
+        <div style="margin-top:10px">
+            <div class="metric-row"><span>RAM:</span><span>${n.ram_used_mb}/${n.ram_total_mb} MB (${n.ram_percent}%)</span></div>
+            <div class="progress-bar"><div class="progress-fill" style="width:${n.ram_percent}%; background:${ramColor}"></div></div>
+        </div>
+    `;
+    return div;
+}
+
+function updateCardContent(card, n) {
+    let ramColor = n.ram_percent > 90 ? 'var(--err)' : n.ram_percent > 70 ? 'var(--warn)' : 'var(--ok)';
+    const onlineHtml = n.users_online > 0 
+        ? `<span class="online-badge">👥 ${n.users_online} онлайн</span>` 
+        : '';
+    
+    card.querySelector('.node-header div').innerHTML = `
+        <span class="node-name">${n.name}</span>
+        ${onlineHtml}
+    `;
+    const rows = card.querySelectorAll('.metric-row span:last-child');
+    if (rows[0]) rows[0].textContent = n.address;
+    if (rows[1]) rows[1].textContent = n.cpu_model;
+    if (rows[2]) rows[2].textContent = n.load_1m;
+    if (rows[3]) rows[3].textContent = `${n.traffic_gb} GB`;
+    if (rows[4]) rows[4].textContent = `${n.ram_used_mb}/${n.ram_total_mb} MB (${n.ram_percent}%)`;
+    
+    const fill = card.querySelector('.progress-fill');
+    if (fill) {
+        fill.style.width = `${n.ram_percent}%`;
+        fill.style.background = ramColor;
+    }
+}
+
+function update(data) {
+    const err = document.getElementById('api-error');
+    if (data.error) { err.style.display = 'block'; err.textContent = '❌ ' + data.error; return; }
+    err.style.display = 'none';
+
+    document.getElementById('nodes-count').textContent = data.global_stats.total_nodes_up;
+    document.getElementById('users-count').textContent = data.global_stats.real_online_total;
+    document.getElementById('last-update').textContent = `Обновлено: ${new Date().toLocaleTimeString()}`;
+
+    // СОРТИРОВКА НОД: По убыванию users_online
+    const sortedNodes = [...data.nodes].sort((a, b) => b.users_online - a.users_online);
+
+    if (isFirstRender) {
+        container.innerHTML = '';
+        sortedNodes.forEach(n => container.appendChild(createNodeCard(n)));
+        isFirstRender = false;
+    } else {
+        // FLIP АНИМАЦИЯ
+        const firstPositions = {};
+        Array.from(container.children).forEach(card => {
+            firstPositions[card.dataset.uuid] = card.getBoundingClientRect();
+        });
+
+        const newNames = new Set(sortedNodes.map(n => n.name));
+        Array.from(container.children).forEach(card => {
+            if (!newNames.has(card.dataset.uuid)) card.remove();
+        });
+
+        sortedNodes.forEach(n => {
+            let card = container.querySelector(`[data-uuid="${n.name}"]`);
+            if (!card) {
+                card = createNodeCard(n);
+                container.appendChild(card);
+            } else {
+                updateCardContent(card, n);
+                container.appendChild(card);
+            }
+        });
+
+        Array.from(container.children).forEach(card => {
+            const first = firstPositions[card.dataset.uuid];
+            const last = card.getBoundingClientRect();
+
+            if (first) {
+                const deltaX = first.left - last.left;
+                const deltaY = first.top - last.top;
+
+                if (deltaX !== 0 || deltaY !== 0) {
+                    card.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+                    card.style.transition = 'transform 0s';
+                    requestAnimationFrame(() => {
+                        card.style.transition = 'transform 0.6s cubic-bezier(0.22, 1, 0.36, 1)';
+                        card.style.transform = '';
+                    });
+                }
+            } else {
+                card.style.opacity = '0';
+                card.style.transition = 'opacity 0.4s ease';
+                requestAnimationFrame(() => card.style.opacity = '1');
+            }
+        });
+    }
+
+    // Рендер таблицы "Онлайн" (<30с)
+    const ub = document.getElementById('users-body');
+    if (data.online_users.length === 0) {
+        ub.innerHTML = '<tr><td colspan="3" class="empty-state">Нет активной передачи данных за последние 30 сек</td></tr>';
+    } else {
+        ub.innerHTML = data.online_users.map(u => `
+            <tr>
+                <td style="font-weight:600">${u.username}</td>
+                <td><span class="user-node-tag">${u.node_name}</span></td>
+                <td style="color: var(--ok)">${u.seconds_ago} сек. назад</td>
+            </tr>
+        `).join('');
+    }
+}
+
+fetchData();
+setInterval(fetchData, 10000);
+</script>
+</body>
+</html>
