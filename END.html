@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Remnawave Live Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚀</text></svg>">
 <style>
 :root { --bg: #0f172a; --card: #1e293b; --text: #e2e8f0; --muted: #94a3b8; --accent: #38bdf8; --ok: #22c55e; --warn: #eab308; --err: #ef4444; }
 body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
@@ -508,9 +509,9 @@ async function fetchWeather() {
         let response;
         let data;
         
-        // 1. Try backend proxy with query arguments
+        // 1. Try backend proxy with query arguments (URL-encoding timezone parameter)
         try {
-            response = await fetch(`/api/weather?lat=${activeCity.lat}&lon=${activeCity.lon}&tz=${activeCity.tz}`);
+            response = await fetch(`/api/weather?lat=${activeCity.lat}&lon=${activeCity.lon}&tz=${encodeURIComponent(activeCity.tz)}`);
             if (response.ok) {
                 data = await response.json();
             }
@@ -520,7 +521,7 @@ async function fetchWeather() {
         
         // 2. Fallback to direct client-side fetch if backend failed or returned an error
         if (!data || data.error) {
-            response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${activeCity.lat}&longitude=${activeCity.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&wind_speed_unit=ms&timezone=${activeCity.tz}`);
+            response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${activeCity.lat}&longitude=${activeCity.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&wind_speed_unit=ms&timezone=${encodeURIComponent(activeCity.tz)}`);
             if (!response.ok) throw new Error('Direct fetch failed');
             data = await response.json();
         }
@@ -564,17 +565,13 @@ async function fetchWeather() {
         };
         
         const info = weatherMap[code] || { text: "Неизвестно", icon: "⛅" };
-        let descText = info.text;
-        if (data.is_mock) {
-            descText += " (Офлайн)";
-        }
         
         weatherContent.innerHTML = `
             <div class="weather-main">
                 <span class="weather-icon">${info.icon}</span>
                 <span class="weather-temp">${temp > 0 ? '+' : ''}${temp}°C</span>
             </div>
-            <div class="weather-desc">${descText}</div>
+            <div class="weather-desc">${info.text}</div>
             <div class="weather-details">
                 <div class="weather-detail-row"><span>Ощущается:</span><strong>${apparent > 0 ? '+' : ''}${apparent}°C</strong></div>
                 <div class="weather-detail-row"><span>Влажность:</span><strong>${humidity}%</strong></div>

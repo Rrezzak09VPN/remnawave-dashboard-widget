@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 title Remnawave Dashboard Runner
 color 0B
 

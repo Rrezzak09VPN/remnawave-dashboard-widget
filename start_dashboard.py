@@ -111,25 +111,13 @@ async def get_dashboard_data():
 async def get_weather(lat: float = 55.7558, lon: float = 37.6173, tz: str = "Europe/Moscow"):
     try:
         url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&wind_speed_unit=ms&timezone={tz}"
-        async with httpx.AsyncClient(verify=False, timeout=4.0) as client:
+        async with httpx.AsyncClient(verify=False, timeout=15.0) as client:
             r = await client.get(url)
             if r.status_code == 200:
                 return r.json()
-    except Exception:
-        pass
-    
-    # Резервный офлайн-режим с имитацией погоды на основе координат
-    mock_temp = 23.5 if lat < 60 else 18.0
-    return {
-        "current": {
-            "temperature_2m": mock_temp,
-            "relative_humidity_2m": 60,
-            "apparent_temperature": mock_temp - 0.5,
-            "weather_code": 1,
-            "wind_speed_10m": 3.2
-        },
-        "is_mock": True
-    }
+    except Exception as e:
+        return {"error": f"Backend fetch failed: {str(e)}"}
+    return {"error": "Failed to fetch weather"}
 
 if __name__ == "__main__":
     import uvicorn
