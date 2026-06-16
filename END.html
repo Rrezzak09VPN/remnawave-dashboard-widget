@@ -433,7 +433,7 @@ tr:last-child td { border-bottom: none; }
 /* --- NEW COMPONENTS LOGIC WITH DYNAMIC SELECTION --- */
 
 // --- GLOBAL STATE & CONFIG ---
-const DEFAULT_CITY = { name: "Новосибирск", lat: 55.0415, lon: 82.9346, tz: "Asia/Novosibirsk" };
+const DEFAULT_CITY = { name: "Москва", lat: 55.7558, lon: 37.6173, tz: "Europe/Moscow" };
 let activeCity;
 try {
     activeCity = JSON.parse(localStorage.getItem('user-city'));
@@ -564,13 +564,17 @@ async function fetchWeather() {
         };
         
         const info = weatherMap[code] || { text: "Неизвестно", icon: "⛅" };
+        let descText = info.text;
+        if (data.is_mock) {
+            descText += " (Офлайн)";
+        }
         
         weatherContent.innerHTML = `
             <div class="weather-main">
                 <span class="weather-icon">${info.icon}</span>
                 <span class="weather-temp">${temp > 0 ? '+' : ''}${temp}°C</span>
             </div>
-            <div class="weather-desc">${info.text}</div>
+            <div class="weather-desc">${descText}</div>
             <div class="weather-details">
                 <div class="weather-detail-row"><span>Ощущается:</span><strong>${apparent > 0 ? '+' : ''}${apparent}°C</strong></div>
                 <div class="weather-detail-row"><span>Влажность:</span><strong>${humidity}%</strong></div>

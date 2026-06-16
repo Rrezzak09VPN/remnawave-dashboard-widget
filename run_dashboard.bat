@@ -1,6 +1,7 @@
 @echo off
 title Remnawave Dashboard Runner
 color 0B
+
 echo ===================================================
 echo     Запуск Remnawave Live Dashboard
 echo ===================================================
@@ -8,38 +9,43 @@ echo.
 
 :: Проверяем, установлен ли Python
 python --version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo [ОШИБКА] Python не найден в системе!
-    echo Пожалуйста, установите Python и добавьте его в PATH (переменные среды).
-    echo Скачать можно с официального сайта: https://www.python.org/downloads/
-    echo.
-    pause
-    exit /b
-)
+if errorlevel 1 goto NO_PYTHON
 
-:: Проверяем и устанавливаем зависимости
+:: Проверяем библиотеки
 echo [1/3] Проверка библиотек Python...
 python -c "import fastapi, httpx, uvicorn" >nul 2>&1
-if %errorlevel% neq 0 (
-    echo Библиотеки не найдены. Устанавливаю необходимые зависимости...
-    python -m pip install fastapi httpx uvicorn
-    if %errorlevel% neq 0 (
-        echo [ОШИБКА] Не удалось установить библиотеки! Проверьте интернет-соединение.
-        pause
-        exit /b
-    )
-) else (
-    echo Все библиотеки (fastapi, httpx, uvicorn) уже установлены.
-)
+if errorlevel 1 goto INSTALL_DEPS
 
-:: Автоматически открываем браузер
+echo Все библиотеки уже установлены.
+goto START_BROWSER
+
+:INSTALL_DEPS
+echo Библиотеки не найдены. Устанавливаю зависимости (fastapi, httpx, uvicorn)...
+python -m pip install fastapi httpx uvicorn
+if errorlevel 1 goto DEPS_ERROR
+goto START_BROWSER
+
+:START_BROWSER
 echo [2/3] Открытие страницы в браузере...
 start http://127.0.0.1:8000/
 
-:: Запускаем сервер
-echo [3/3] Запуск локального сервера...
-echo Для остановки сервера закройте это окно.
-echo.
+echo [3/3] Запуск сервера...
 python start_dashboard.py
+goto END
 
+:NO_PYTHON
+echo [ОШИБКА] Python не установлен или не добавлен в PATH!
+echo Пожалуйста, скачайте и установите Python (отметьте галочку "Add Python to PATH" при установке).
+echo Официальный сайт: https://www.python.org/downloads/
+echo.
+pause
+exit
+
+:DEPS_ERROR
+echo [ОШИБКА] Не удалось установить библиотеки! Проверьте интернет-соединение.
+echo.
+pause
+exit
+
+:END
 pause
