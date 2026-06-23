@@ -7,9 +7,10 @@ from fastapi.responses import HTMLResponse
 app = FastAPI()
 
 # --- КОНФИГУРАЦИЯ ---
-REMNA_API_URL = "https://your-remnawave-instance.com"
-REMNA_TOKEN = "YOUR_REMN_API_TOKEN"
-HEADERS = {"Authorization": f"Bearer {REMNA_TOKEN}"}
+REMNA_API_URL = "https://panel.primer.com" #Адрес вашей панели
+REMNA_TOKEN = "Ваш API токен панели здесь"
+COOKIE_SECRET = "" #стереть куки и он запишет свои
+HEADERS = {"Authorization": f"Bearer {REMNA_TOKEN}", "Cookie": COOKIE_SECRET}
 ONLINE_THRESHOLD_SEC = 30  # Жесткий порог по твоему запросу
 
 async def fetch_data():
@@ -105,7 +106,10 @@ async def read_root():
 
 @app.get("/api/dashboard-data")
 async def get_dashboard_data():
-    return await fetch_data()
+    try:
+        return await fetch_data()
+    except Exception as e:
+        return {"nodes": [], "online_users": [], "global_stats": {}, "error": str(e)}
 
 @app.get("/api/weather")
 async def get_weather(lat: float = 55.7558, lon: float = 37.6173, tz: str = "Europe/Moscow"):
