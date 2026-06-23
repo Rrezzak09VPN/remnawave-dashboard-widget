@@ -64,3 +64,7 @@ COOKIE_SECRET = ""                             # Cookie (если требует
 ## 📄 Лицензия
 
 MIT
+
+## ❤️ Community
+
+Сделано для сикретнова чатика камунити Remnawave
