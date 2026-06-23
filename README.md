@@ -1,3 +1,12 @@
+<details>
+<summary>📸 Скриншот</summary>
+
+![Screenshot](https://raw.githubusercontent.com/Rrezzak09VPN/remnawave-dashboard-widget/main/screenshot.png)
+
+</details>
+
+<br>
+
 # 📊 Remnawave Live Monitor & Dynamic Dashboard
 
 Красивый адаптивный дашборд для мониторинга нод и онлайн-пользователей **Remnawave** с виджетом погоды, часами и календарём. Оптимизирован под любые экраны: от вертикальных инфо-стоек до 4K-мониторов.
