@@ -1,4 +1,4 @@
-﻿<details>
+<details>
 <summary>📸 Скриншот</summary>
 
 ![Screenshot](https://raw.githubusercontent.com/Rrezzak09VPN/remnawave-dashboard-widget/main/screenshot.png)
@@ -26,13 +26,13 @@
 
 ### Windows
 1. Скачайте проект в любую папку
-2. Запустите **un_dashboard.bat** — скрипт сам установит зависимости (astapi, httpx, uvicorn) и откроет браузер
+2. Запустите **`run_dashboard.bat`** — скрипт сам установит зависимости (fastapi, httpx, uvicorn) и откроет браузер
 
 ### Linux / macOS
-`
+```
 pip install fastapi httpx uvicorn
 python start_dashboard.py
-`
+```
 
 Дашборд откроется по адресу: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
 
@@ -40,11 +40,11 @@ python start_dashboard.py
 
 Откройте файл и укажите данные вашей Remnawave панели:
 
-`python
+```python
 REMNA_API_URL = "https://panel.example.com"   # Адрес вашей панели
 REMNA_TOKEN = "eyJhbGciOiJI..."               # API токен Remnawave
 COOKIE_SECRET = ""                             # Cookie (если требуется)
-`
+```
 
 ### Вариант 1: Прямое подключение (Docker / Bare Metal)
 Если панель доступна напрямую — оставьте COOKIE_SECRET пустым ("").
@@ -52,13 +52,13 @@ COOKIE_SECRET = ""                             # Cookie (если требует
 ### Вариант 2: Панель за Nginx (с Cookie-авторизацией)
 Если ваша Remnawave панель за Nginx — вставьте в COOKIE_SECRET значение Cookie, которое вы получили при установке панели (его обычно сохраняют в текстовый файл).
 
-Если вы не сохранили Cookie — откройте панель в браузере, нажмите F12 → вкладка **Network**, обновите страницу (F5), найдите любой запрос к API, скопируйте значение заголовка Cookie: и вставьте в COOKIE_SECRET.
+Если вы не сохранили Cookie — откройте панель в браузере, нажмите F12 → вкладка Network, обновите страницу (F5), найдите любой запрос к API, скопируйте значение заголовка Cookie: и вставьте в COOKIE_SECRET.
 
 ## 📦 Структура проекта
 
 - start_dashboard.py — backend на FastAPI (прокси к Remnawave API + погода)
 - END.html — frontend с интерфейсом дашборда
-- un_dashboard.bat — скрипт запуска для Windows
+- run_dashboard.bat — скрипт запуска для Windows
 - screenshot.png — скриншот дашборда
 
 ## 📄 Лицензия
